@@ -1,0 +1,309 @@
+
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title><%- title %></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="javascripts/js.cookie.js"></script>
+    <script src="javascripts/utils.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="icon" type="image/png" href="/images/odot.png">
+    <script>
+        address = $.cookie("address");
+        $.cookie("latestPage", "http://52.25.8.179/unit");
+
+        btc_eth = null;
+        usd_btc = null;
+        usd_cad = null;
+        usd_jpy = null;
+        usd_gbp = null;
+        usd_eur = null;
+        usd_cny = null;
+
+
+        var populateInit = function() {
+            $.getJSON("http://api.fixer.io/latest?base=USD").done(function(data) {
+                    console.log(data);
+                    usd_cad = data["rates"]["CAD"];
+                    usd_jpy = data["rates"]["JPY"];
+                    usd_gbp = data["rates"]["GBP"];
+                    usd_eur = data["rates"]["EUR"];
+                    usd_cny = data["rates"]["CNY"];
+                    $.getJSON("https://poloniex.com/public?command=returnTicker").done( function(data) {
+                            console.log(data);
+                            btc_eth = data["BTC_ETH"]["last"];
+                            usd_btc = data["USDT_BTC"]["last"];
+                            populate(getEth());
+                    });
+            });
+        }
+
+        var populate = function(eth) {
+            $("#etherField").val(strip(eth * 1));
+            $("#finneyField").val(strip(eth * 1000));
+            $("#szaboField").val(strip(eth * 1000000));
+            $("#shannonField").val(strip(eth * 1000000000));
+            $("#weiField").val(strip(eth * 1000000000000000000));
+            var btc = eth * btc_eth;
+            var usd = btc * usd_btc;
+            $("#btcField").val(strip(btc));
+            $("#usdField").val(usd.toFixed(2));
+            $("#eurField").val((usd * usd_eur).toFixed(2));
+            $("#gbpField").val((usd * usd_gbp).toFixed(2));
+            $("#cadField").val((usd * usd_cad).toFixed(2));
+            $("#jpyField").val((usd * usd_jpy).toFixed(2));
+            $("#cnyField").val((usd * usd_cny).toFixed(2));
+        }
+
+        var getEth = function() {
+            var current = $("#currentUnit").text();
+            var current = current.replace(/\W/g, '').toLowerCase();
+            switch(current) {
+                case "ether":
+                    return $("#oneUnitInput").val();
+                case "finney":
+                    return $("#oneUnitInput").val()/1000;
+                case "szabo":
+                    return $("#oneUnitInput").val()/1000000;
+                case "shannon":
+                    return $("#oneUnitInput").val()/1000000000;
+                case "wei":
+                    return $("#oneUnitInput").val()/1000000000000000000;
+                case "btc":
+                    return $("#oneUnitInput").val()/btc_eth;
+                case "usd":
+                    return $("#oneUnitInput").val()/usd_btc/btc_eth;
+                case "eur":
+                    return $("#oneUnitInput").val()/btc_eth/usd_btc/usd_eur;
+                case "gpb":
+                    return $("#oneUnitInput").val()/btc_eth/usd_btc/usd_gbp;
+                case "cad":
+                    return $("#oneUnitInput").val()/btc_eth/usd_btc/usd_cad;
+                case "jpy":
+                    return $("#oneUnitInput").val()/btc_eth/usd_btc/usd_jpy;
+                case "cny":
+                    return $("#oneUnitInput").val()/btc_eth/usd_btc/usd_cny;
+                default:
+                    return 1;
+            }
+        }
+
+        var updateFieldLabels = function() {
+            var current = $("#currentUnit").text();
+            var current = current.replace(/\W/g, '').toLowerCase();
+            var current = current + "Field";
+            $(".outputBtn").removeClass('btn-info');
+            $("#" + current).next().children().eq(0).addClass("btn-info");
+        }
+
+        $(document).ready(function() {
+            var value = getUrlParameter("value");
+            var currency = getUrlParameter("currency");
+
+            $("#addressField").html(getAddressLink(address));
+
+
+            if (value && currency) {
+                $("#oneUnitInput").val(value);
+                $("#currentUnit").text(currency);
+            }
+            else {
+                $("#oneUnitInput").val(1);
+            }
+            updateFieldLabels();
+            populateInit();
+
+            $("#oneButton").click(function() {
+                $.cookie("address", $("#addressInput").val());
+                $.cookie("latestPage", "http://52.25.8.179/unit");
+                location.reload();
+            });
+
+            $(".unitSelector").click(function() {
+                var unitName = $(this).children().eq(0).text();
+                $("#currentUnit").text(unitName);
+                updateFieldLabels();
+                populate(getEth());
+            });
+
+            $("#oneUnitInput").on('input', function() {
+                //this.value = this.value.replace(/[^0-9\.]/g,'');
+                populate(getEth());
+            });
+
+            $("#logout").click(function() {
+                $.removeCookie("address");
+                $.removeCookie("latestPage");
+                window.location.replace("/");
+            });
+
+        });
+    </script>
+  </head>
+  <body>
+
+<nav class="navbar navbar-default">
+  <div class="container-fluid">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                    <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                                    <span class="icon-bar"></span> 
+                                          </button>
+      <a class="navbar-brand" href="#">
+          One.
+      </a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+    <ul class="nav navbar-nav">
+        <li><a href="/board">Board <img style="height:15px;width:15px;margin-top:-2px" src="/images/oneboard.png"></img></a></li>
+        <li><a href="/chain">Chain <img style="height:15px;width:15px;margin-top:-2px" src="images/onechain.png"></img></a></li>
+        <li><a href="/dice">Dice <img style="height:15px;width:15px;margin-top:-2px" src="images/onedice.png"></img></a></li>
+        <li><a href="/estimate">Estimate <img style="height:15px;width:15px;margin-top:-2px" src="images/oneestimate.png"></a></li>
+        <li><a href="/pool">Pool <img style="height:15px;width:15px;margin-top:-2px" src="images/onepool.png"></img></a></li>
+        <li class="active"><a href="#">Unit <img style="height:15px;width:15px;margin-top:-2px" src="images/oneunit.png"></img></a></li>
+    </ul>
+      <ul class="nav navbar-nav navbar-right">
+          <li><a>Your Address: <span id="addressField">Guest</span></a></li>
+          <li><a id="logout">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+    <div class="container">
+        <!-- Dice Logo -->
+        <div class="row">
+            <div class="col-md-12" style="text-align:center">
+                <h1><b>One.</b> Unit.  
+                    
+                <img style="height:75px;width:75px" src="images/oneunit.png"> 
+            
+            </h1>
+            </div>
+        </div>
+        <!-- Address Bar -->
+        <div class="row" style="margin-top:10px;text-align:center">
+            A simple currency converter.
+        </div>
+        <div style="text-align:center">
+              <a href="https://www.facebook.com/OneEther"><img src="images/facebookicon.png" style="height:20px;width:20px"></a>
+              <a href="https://twitter.com/OneEther"><img src="images/twittericon.png" style="height:20px;width:20px"></a>
+              <a href="mailto:oneether@gmail.com"><img src="images/emailicon.png" style="height:20px;width:20px"></a>
+        </div>
+
+    </div>
+
+    <div class="well" style="margin-top:25px">
+        <div class="row">
+<div class="col-md-6 col-md-offset-3">
+    <div class="input-group input-group-lg">
+      <input type="number" id="oneUnitInput" class="form-control" aria-label="...">
+      <div class="input-group-btn">
+          <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span id="currentUnit">Ether</span> <span class="caret"></span></button>
+        <ul class="dropdown-menu dropdown-menu-right">
+          <li class="unitSelector"><a href="#">Ether</a></li>
+          <li class="unitSelector"><a href="#">Finney</a></li>
+          <li class="unitSelector"><a href="#">Szabo</a></li>
+          <li class="unitSelector"><a href="#">Shannon</a></li>
+          <li class="unitSelector"><a href="#">Wei</a></li>
+          <li role="separator" class="divider"></li>
+          <li class="unitSelector"><a href="#">BTC (฿)</a></li>
+          <li role="separator" class="divider"></li>
+          <li class="unitSelector"><a href="#">USD ($)</a></li>
+          <li class="unitSelector"><a href="#">EUR (€)</a></li>
+          <li class="unitSelector"><a href="#">GBP (£)</a></li>
+          <li class="unitSelector"><a href="#">CAD ($)</a></li>
+          <li class="unitSelector"><a href="#">JPY (¥)</a></li>
+          <li class="unitSelector"><a href="#">CNY (¥)</a></li>
+        </ul>
+      </div><!-- /btn-group -->
+    </div><!-- /input-group -->
+  </div><!-- /.col-lg-6 -->
+</div><!-- /.row -->
+    </div> <!-- well -->
+
+<div class="row">
+  <div class="col-md-4 col-md-offset-2">
+    <div class="input-group">
+      <input id="etherField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">Ether</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="finneyField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">Finney</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="szaboField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">Szabo</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="shannonField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">Shannon</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="weiField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">Wei</button>
+      </span>
+    </div><!-- /input-group -->
+  </div><!-- /.col -->
+  <div class="col-md-4">
+    <div class="input-group">
+      <input id="btcField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">BTC (฿)</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:30px" class="input-group">
+      <input id="usdField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">USD ($)</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="eurField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">EUR (€)</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="gbpField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">GBP (£)</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="cadField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">CAD ($)</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="jpyField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">JPY (¥)</button>
+      </span>
+    </div><!-- /input-group -->
+    <div style="margin-top:3px" class="input-group">
+      <input id="cnyField" type="text" class="form-control" placeholder="NaN">
+      <span class="input-group-btn">
+        <button class="btn btn-selected outputBtn" type="button">CNY (¥)</button>
+      </span>
+    </div><!-- /input-group -->
+  </div><!-- /.col -->
+</div><!-- /.row -->
+
+</div> <!--container-->
+  </body>
+</html>
